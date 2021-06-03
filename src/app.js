@@ -1,7 +1,39 @@
-const express = require("express");
+const express = require('express');
+
 const app = express();
 
-// TODO: Follow instructions in the checkpoint to implement ths API.
+const flips = require('./data/flips-data');
+const counts = require('./data/counts-data');
+
+app.use('/counts/:countId', (request, response, next) => {
+  const { countId } = request.params;
+  const foundCount = counts[countId];
+
+  if (foundCount === undefined) {
+    next(`Count id not found: ${countId}`);
+  } else {
+    response.json({ data: foundCount });
+  }
+});
+
+app.use('/counts', (request, response) => {
+  response.json({ data: counts });
+});
+
+app.use('/flips/:flipId', (request, response, next) => {
+  const { flipId } = request.params;
+  const foundFlip = flips.find((flip) => flip.id === Number(flipId));
+
+  if (foundFlip) {
+    response.json({ data: foundFlip });
+  } else {
+    next(`Flip id not found: ${flipId}`);
+  }
+});
+
+app.use('/flips', (request, response) => {
+  response.json({ data: flips });
+});
 
 // Not found handler
 app.use((request, response, next) => {
