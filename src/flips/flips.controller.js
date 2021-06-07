@@ -30,11 +30,25 @@ function create(req, res) {
   res.status(201).json({ data: newFlip });
 }
 
+function resultPropertyIsValid(req, res, next) {
+  const { data: { result } = {} } = req.body;
+  const validResult = ['heads', 'tails', 'edge'];
+  if (validResult.includes(result)) {
+    return next();
+  }
+  next({
+    status: 400,
+    message: `Value of the 'result' property must be one of ${validResult}. Received: ${result}`,
+  });
+}
+
 module.exports = {
   create: [bodyHasResultProperty, create],
   list,
 };
 
 module.exports = {
+  create: [bodyHasResultProperty, resultPropertyIsValid, create],
+  read,
   list,
 };
