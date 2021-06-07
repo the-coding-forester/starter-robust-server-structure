@@ -6,6 +6,8 @@ function list(req, res) {
 
 const counts = require('../data/counts-data');
 
+router.route('/:flipId').get(controller.read);
+
 let lastFlipId = flips.reduce((maxId, flip) => Math.max(maxId, flip.id), 0);
 
 function bodyHasResultProperty(req, res, next) {
@@ -42,13 +44,26 @@ function resultPropertyIsValid(req, res, next) {
   });
 }
 
-module.exports = {
-  create: [bodyHasResultProperty, create],
-  list,
-};
+function flipExists(req, res, next) {
+  const { flipId } = req.params;
+  const foundFlip = flips.find((flip) => flip.id === Number(flipId));
+  if (foundFlip) {
+    return next();
+  }
+  next({
+    status: 404,
+    message: `Flip id not found: ${flipId}`,
+  });
+}
+
+function read(req, res) {
+  const { flipId } = req.params;
+  const foundFlip = flips.find((flip) => flip.id === Number(flipId));
+  res.json({ data: foundFlip });
+}
 
 module.exports = {
   create: [bodyHasResultProperty, resultPropertyIsValid, create],
-  read,
   list,
+  read: [flipExists, read],
 };

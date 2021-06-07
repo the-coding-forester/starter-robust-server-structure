@@ -26,49 +26,7 @@ app.get('/counts', (request, response) => {
   response.json({ data: counts });
 });
 
-app.get('/flips/:flipId', (request, response, next) => {
-  const { flipId } = request.params;
-  const foundFlip = flips.find((flip) => flip.id === Number(flipId));
-
-  if (foundFlip) {
-    response.json({ data: foundFlip });
-  } else {
-    next({
-      status: 404,
-      message: `Flip id not found: ${flipId}`,
-    });
-  }
-});
-
 app.use('/flips', flipsRouter);
-
-function bodyHasResultProperty(request, response, next) {
-  const { data: { result } = {} } = request.body;
-  if (result) {
-    return next();
-  }
-  next({
-    status: 400,
-    message: "A 'result' property is required.",
-  });
-}
-
-let lastFlipId = flips.reduce((maxId, flip) => Math.max(maxId, flip.id), 0);
-
-app.post('/flips', bodyHasResultProperty, (request, response, next) => {
-  const { data: { result } = {} } = request.body;
-  if (result) {
-    const newFlip = {
-      id: ++lastFlipId, // Increment last id then assign as the current ID
-      result,
-    };
-    flips.push(newFlip);
-    counts[result] = counts[result] + 1; // Increment the counts
-    response.status(201).json({ data: newFlip });
-  } else {
-    response.sendStatus(400);
-  }
-});
 
 // Not found handler
 app.use((request, response, next) => {
