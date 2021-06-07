@@ -1,15 +1,12 @@
 const flips = require('../data/flips-data');
-
-function list(req, res) {
-  res.json({ data: flips });
-}
-
 const counts = require('../data/counts-data');
+
+const validResult = ['heads', 'tails', 'edge'];
 
 let lastFlipId = flips.reduce((maxId, flip) => Math.max(maxId, flip.id), 0);
 
-function bodyHasResultProperty(req, res, next) {
-  const { data: { result } = {} } = req.body;
+function bodyHasResultProperty(request, response, next) {
+  const { data: { result } = {} } = request.body;
   if (result) {
     return next();
   }
@@ -19,31 +16,31 @@ function bodyHasResultProperty(req, res, next) {
   });
 }
 
-function create(req, res) {
-  const { data: { result } = {} } = req.body;
+function create(request, response, next) {
+  const { data: { result } = {} } = request.body;
   const newFlip = {
     id: ++lastFlipId, // Increment last id then assign as the current ID
     result,
   };
   flips.push(newFlip);
   counts[result] = counts[result] + 1;
-  res.status(201).json({ data: newFlip });
+  response.status(201).json({ data: newFlip });
 }
 
-function resultPropertyIsValid(req, res, next) {
-  const { data: { result } = {} } = req.body;
-  const validResult = ['heads', 'tails', 'edge'];
-  if (validResult.includes(result)) {
-    return next();
-  }
-  next({
-    status: 400,
-    message: `Value of the 'result' property must be one of ${validResult}. Received: ${result}`,
-  });
+function destroy(request, response) {
+  const { flipId } = request.params;
+  const index = flips.findIndex((flip) => flip.id === Number(flipId));
+  // splice returns an array of the deleted elements, even if it is one element
+  const deletedFlips = flips.splice(index, 1);
+  deletedFlips.forEach(
+    (deletedFlip) => (counts[deletedFlip.result] = counts[deletedFlip.result] - 1),
+  );
+
+  response.sendStatus(204);
 }
 
-function flipExists(req, res, next) {
-  const { flipId } = req.params;
+function flipExists(request, response, next) {
+  const { flipId } = request.params;
   const foundFlip = flips.find((flip) => flip.id === Number(flipId));
   if (foundFlip) {
     return next();
@@ -54,18 +51,33 @@ function flipExists(req, res, next) {
   });
 }
 
-function read(req, res) {
-  const { flipId } = req.params;
-  const foundFlip = flips.find((flip) => flip.id === Number(flipId));
-  res.json({ data: foundFlip });
+function list(request, response) {
+  response.json({ data: flips });
 }
 
-function update(req, res) {
-  const { flipId } = req.params;
+function read(request, response, next) {
+  const { flipId } = request.params;
+  const foundFlip = flips.find((flip) => flip.id === Number(flipId));
+  response.json({ data: foundFlip });
+}
+
+function resultPropertyIsValid(request, response, next) {
+  const { data: { result } = {} } = request.body;
+  if (validResult.includes(result)) {
+    return next();
+  }
+  next({
+    status: 400,
+    message: `Value of the 'result' property must be one of ${validResult}. Received: ${result}`,
+  });
+}
+
+function update(request, response, next) {
+  const { flipId } = request.params;
   const foundFlip = flips.find((flip) => flip.id === Number(flipId));
 
   const originalResult = foundFlip.result;
-  const { data: { result } = {} } = req.body;
+  const { data: { result } = {} } = request.body;
 
   if (originalResult !== result) {
     // update the flip
@@ -75,19 +87,7 @@ function update(req, res) {
     counts[result] = counts[result] + 1;
   }
 
-  res.json({ data: foundFlip });
-}
-
-function destroy(req, res) {
-  const { flipId } = req.params;
-  const index = flips.findIndex((flip) => flip.id === Number(flipId));
-  // splice returns an array of the deleted elements, even if it is one element
-  const deletedFlips = flips.splice(index, 1);
-  deletedFlips.forEach(
-    (deletedFlip) => (counts[deletedFlip.result] = counts[deletedFlip.result] - 1),
-  );
-
-  res.sendStatus(204);
+  response.json({ data: foundFlip });
 }
 
 module.exports = {
