@@ -5,8 +5,8 @@ const validResult = ['heads', 'tails', 'edge'];
 
 let lastFlipId = flips.reduce((maxId, flip) => Math.max(maxId, flip.id), 0);
 
-function bodyHasResultProperty(request, response, next) {
-  const { data: { result } = {} } = request.body;
+function bodyHasResultProperty(req, res, next) {
+  const { data: { result } = {} } = req.body;
   if (result) {
     return next();
   }
@@ -16,19 +16,19 @@ function bodyHasResultProperty(request, response, next) {
   });
 }
 
-function create(request, response, next) {
-  const { data: { result } = {} } = request.body;
+function create(req, res, next) {
+  const { data: { result } = {} } = req.body;
   const newFlip = {
     id: ++lastFlipId, // Increment last id then assign as the current ID
     result,
   };
   flips.push(newFlip);
   counts[result] = counts[result] + 1;
-  response.status(201).json({ data: newFlip });
+  res.status(201).json({ data: newFlip });
 }
 
-function destroy(request, response) {
-  const { flipId } = request.params;
+function destroy(req, res) {
+  const { flipId } = req.params;
   const index = flips.findIndex((flip) => flip.id === Number(flipId));
   // splice returns an array of the deleted elements, even if it is one element
   const deletedFlips = flips.splice(index, 1);
@@ -36,13 +36,14 @@ function destroy(request, response) {
     (deletedFlip) => (counts[deletedFlip.result] = counts[deletedFlip.result] - 1),
   );
 
-  response.sendStatus(204);
+  res.sendStatus(204);
 }
 
-function flipExists(request, response, next) {
-  const { flipId } = request.params;
+function flipExists(req, res, next) {
+  const { flipId } = req.params;
   const foundFlip = flips.find((flip) => flip.id === Number(flipId));
   if (foundFlip) {
+    res.locals.flip = foundFlip;
     return next();
   }
   next({
@@ -51,18 +52,16 @@ function flipExists(request, response, next) {
   });
 }
 
-function list(request, response) {
-  response.json({ data: flips });
+function list(req, res) {
+  res.json({ data: flips });
 }
 
-function read(request, response, next) {
-  const { flipId } = request.params;
-  const foundFlip = flips.find((flip) => flip.id === Number(flipId));
-  response.json({ data: foundFlip });
+function read(req, res, next) {
+  res.json({ data: res.locals.flip });
 }
 
-function resultPropertyIsValid(request, response, next) {
-  const { data: { result } = {} } = request.body;
+function resultPropertyIsValid(req, res, next) {
+  const { data: { result } = {} } = req.body;
   if (validResult.includes(result)) {
     return next();
   }
@@ -72,22 +71,20 @@ function resultPropertyIsValid(request, response, next) {
   });
 }
 
-function update(request, response, next) {
-  const { flipId } = request.params;
-  const foundFlip = flips.find((flip) => flip.id === Number(flipId));
-
-  const originalResult = foundFlip.result;
-  const { data: { result } = {} } = request.body;
+function update(req, res, next) {
+  const { flip } = res.locals;
+  const originalResult = flip.result;
+  const { data: { result } = {} } = req.body;
 
   if (originalResult !== result) {
     // update the flip
-    foundFlip.result = result;
+    flip.result = result;
     // Adjust the counts
     counts[originalResult] = counts[originalResult] - 1;
     counts[result] = counts[result] + 1;
   }
 
-  response.json({ data: foundFlip });
+  res.json({ data: flip });
 }
 
 module.exports = {
